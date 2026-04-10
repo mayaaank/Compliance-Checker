@@ -12,7 +12,6 @@ export default function SimulatePage() {
   const router = useRouter();
 
   const handleStartSimulation = async () => {
-    if (!file) return;
     setIsUploading(true);
     try {
       await runComplianceCheck();

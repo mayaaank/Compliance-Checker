@@ -1,0 +1,11 @@
+{
+  "runs": [
+    {
+      "run_id": "run_1",
+      "score": 95,
+      "timestamp": "2026-04-10T16:30:04.564780",
+      "risk_level": "high",
+      "changes_count": 1
+    }
+  ]
+}

@@ -29,6 +29,10 @@ export default function ImpactReportPage() {
     fetchReport();
   }, []);
 
+  const changes = report?.changes || [];
+  const highRisks = changes.filter(c => c.risk === "high").length;
+  const totalRisks = changes.length;
+
   return (
     <div className="pt-24 pb-20 px-8 min-h-screen bg-background animate-fade-in">
       <div className="max-w-[900px] mx-auto space-y-12">
@@ -42,7 +46,10 @@ export default function ImpactReportPage() {
               <Printer className="w-4 h-4" />
               <span>Print Briefing</span>
             </button>
-            <button className="linear-button-primary h-10 px-6 flex items-center gap-2">
+            <button 
+              onClick={() => window.print()}
+              className="linear-button-primary h-10 px-6 flex items-center gap-2"
+            >
               <Download className="w-4 h-4" />
               <span>Export PDF</span>
             </button>
@@ -58,7 +65,7 @@ export default function ImpactReportPage() {
               </div>
               <div className="space-y-4">
                  <h1 className="text-5xl font-black tracking-tightest text-white print:text-black leading-tight">Executive Impact <br /> Assessment</h1>
-                 <p className="text-text-muted text-[11px] uppercase tracking-[0.4em] font-bold">TraceID: 8491-X // Governance v2.4</p>
+                 <p className="text-text-muted text-[11px] uppercase tracking-[0.4em] font-bold">TraceID: {report?.run_id || '8491-X'} // Governance v2.4</p>
               </div>
             </div>
             <div className="text-right space-y-6">
@@ -75,15 +82,15 @@ export default function ImpactReportPage() {
           <div className="grid grid-cols-3 gap-16 border-b border-white/[0.08] pb-20 print:border-black">
              <div className="space-y-4">
                 <span className="text-[10px] font-bold text-text-muted uppercase tracking-[0.3em]">Total Conflicts</span>
-                <div className="text-5xl font-black tracking-tightest text-white print:text-black">{report?.summary_metrics.total_risks || 0}</div>
+                <div className="text-5xl font-black tracking-tightest text-white print:text-black">{totalRisks}</div>
              </div>
              <div className="space-y-4">
                 <span className="text-[10px] font-bold text-text-muted uppercase tracking-[0.3em]">Critical Flux</span>
-                <div className="text-5xl font-black tracking-tightest text-risk-high">{report?.summary_metrics.high_risks || 0}</div>
+                <div className="text-5xl font-black tracking-tightest text-risk-high">{highRisks}</div>
              </div>
              <div className="space-y-4">
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-[0.3em]">Health Rating</span>
-                <div className="text-5xl font-black tracking-tightest text-white print:text-black">A-</div>
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-[0.3em]">Evolution Score</span>
+                <div className="text-5xl font-black tracking-tightest text-white print:text-black">{report?.evolution_score || 0}</div>
              </div>
           </div>
 
@@ -93,20 +100,20 @@ export default function ImpactReportPage() {
                    <span>Mapping Resolution Matrix</span>
                 </h3>
                 <div className="grid gap-12">
-                   {report?.risk_cards.map((risk, i) => (
+                   {changes.map((change, i) => (
                      <div key={i} className="flex gap-12 items-start group">
                         <span className="text-xs font-mono font-bold text-text-muted opacity-30 pt-1 tracking-widest">{(i+1).toString().padStart(2, '0')}</span>
                         <div className="space-y-4 flex-1">
                            <div className="flex items-center space-x-4">
-                              <h4 className="font-bold text-white uppercase tracking-tight text-lg print:text-black">{risk.title}</h4>
+                              <h4 className="font-bold text-white uppercase tracking-tight text-lg print:text-black">{change.affected_section}</h4>
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border uppercase tracking-widest ${
-                                risk.level === 'high' ? 'text-risk-high border-risk-high/30 bg-risk-high/5' : 
-                                risk.level === 'medium' ? 'text-risk-medium border-risk-medium/30 bg-risk-medium/5' : 'text-risk-low border-risk-low/30 bg-risk-low/5'
+                                change.risk === 'high' ? 'text-risk-high border-risk-high/30 bg-risk-high/5' : 
+                                change.risk === 'medium' ? 'text-risk-medium border-risk-medium/30 bg-risk-medium/5' : 'text-risk-low border-risk-low/30 bg-risk-low/5'
                               }`}>
-                                {risk.level}
+                                {change.risk}
                               </span>
                            </div>
-                           <p className="text-text-secondary text-[15px] leading-relaxed font-medium print:text-black/80">{risk.description}</p>
+                           <p className="text-text-secondary text-[15px] leading-relaxed font-medium print:text-black/80">{change.new_text}</p>
                         </div>
                      </div>
                    ))}
@@ -118,11 +125,11 @@ export default function ImpactReportPage() {
                    <span>Proposed Dynamic Amendments</span>
                 </h3>
                 <div className="space-y-8">
-                   {report?.amendments.map((amendment, i) => (
+                   {changes.filter(c => c.amendment).map((change, i) => (
                      <div key={i} className="p-10 bg-black/60 border border-white/[0.08] rounded-2xl space-y-6 print:bg-neutral-100 print:border-black">
-                        <h4 className="font-bold text-white uppercase tracking-widest text-xs print:text-black">{amendment.title}</h4>
+                        <h4 className="font-bold text-white uppercase tracking-widest text-xs print:text-black">{change.affected_section}</h4>
                         <pre className="text-[13px] font-mono text-text-secondary leading-relaxed whitespace-pre-wrap print:text-black custom-scrollbar">
-                           {amendment.diff}
+                           {`- ${change.old_text}\n+ ${change.amendment}`}
                         </pre>
                      </div>
                    ))}
@@ -134,7 +141,7 @@ export default function ImpactReportPage() {
              <div className="space-y-8">
                 <p className="text-[11px] text-text-muted max-w-sm leading-relaxed font-bold uppercase tracking-[0.2em] print:text-black/60">
                    This assessment was autonomously verified by Compliance Swarm v4. Audit trails available via secure node handshake.
-                </p>
+                 </p>
                 <div className="flex items-center space-x-8 text-text-muted">
                    <Globe className="w-4 h-4" />
                    <Calendar className="w-4 h-4" />
@@ -143,7 +150,7 @@ export default function ImpactReportPage() {
              </div>
              <div className="text-right space-y-4">
                 <div className="w-40 h-px bg-white/10 ml-auto print:bg-black" />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Authenticity Index: 0x921A-F4</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Authenticity Index: {report?.run_id || '0x921A'}-F4</p>
              </div>
           </div>
         </div>

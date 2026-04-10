@@ -29,9 +29,20 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center space-x-6">
-          <Link href="/simulate" className="text-[13px] font-medium text-text-secondary hover:text-white transition-colors">
-            Log in
-          </Link>
+          <button 
+            onClick={async () => {
+              try {
+                const { resetDemo } = await import("@/lib/api");
+                await resetDemo();
+                window.location.href = "/simulate"; // Force full reload to verify empty state
+              } catch (err) {
+                console.error("Reset failed", err);
+              }
+            }}
+            className="text-[10px] uppercase tracking-widest font-bold text-risk-high hover:text-white transition-colors"
+          >
+            Reset Demo
+          </button>
           <Link href="/simulate" className="h-8 px-4 bg-white text-black text-[13px] font-bold rounded-lg hover:bg-[#e5e5e7] transition-all flex items-center justify-center">
             Run Scan
           </Link>

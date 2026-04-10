@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import { ToastProvider } from "@/components/ToastProvider";
+import { PageTransition } from "@/components/PageTransition";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -26,10 +28,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans`}>
-        <Navbar />
-        <main className="min-h-screen">
-          {children}
-        </main>
+        <ToastProvider>
+          <Navbar />
+          <main className="min-h-screen">
+            <PageTransition>
+              {children}
+            </PageTransition>
+          </main>
+        </ToastProvider>
       </body>
     </html>
   );
