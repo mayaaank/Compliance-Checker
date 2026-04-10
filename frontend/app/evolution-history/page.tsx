@@ -3,37 +3,37 @@
 import { useEffect, useState } from "react";
 import { 
   History, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  ChevronRight,
-  Target,
-  Clock,
+  TrendingUp, 
+  Calendar, 
+  ChevronRight, 
+  ShieldCheck,
   Activity,
-  ArrowRight
+  ArrowUpRight
 } from "lucide-react";
 import Link from "next/link";
-import { getEvolution, Evolution } from "@/lib/api";
+import { getEvolution } from "@/lib/api";
+import EmptyState from "@/components/EmptyState";
+
+interface EvolutionRun {
+  run_id: string;
+  score: number;
+  timestamp: string;
+  risk_level: "high" | "medium" | "low";
+  changes_count: number;
+}
 
 export default function EvolutionHistoryPage() {
-  const [evolution, setEvolution] = useState<Evolution>({ runs: [] });
+  const [runs, setRuns] = useState<EvolutionRun[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchEvolution() {
       try {
         const data = await getEvolution();
-        setEvolution(data);
+        setRuns(data.runs || []);
       } catch (err) {
-        setEvolution({
-          runs: [
-            { date: "2024-01-15", score: 65, change: 0 },
-            { date: "2024-02-10", score: 72, change: 7 },
-            { date: "2024-03-05", score: 68, change: -4 },
-            { date: "2024-04-12", score: 84, change: 16 },
-            { date: "2024-05-20", score: 89, change: 5 },
-            { date: "2024-06-15", score: 92, change: 3 },
-          ]
-        });
+        setError(err instanceof Error ? err.message : "Failed to load evolution history");
       } finally {
         setIsLoading(false);
       }
@@ -41,131 +41,176 @@ export default function EvolutionHistoryPage() {
     fetchEvolution();
   }, []);
 
+  if (isLoading) {
+    return (
+      <div className="pt-24 px-8 max-w-[1000px] mx-auto space-y-12 animate-fade-in">
+        <div className="h-10 w-64 bg-white/5 rounded-lg animate-pulse" />
+        <div className="space-y-6">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-24 bg-white/5 rounded-2xl border border-white/5 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error || runs.length === 0) {
+    return (
+      <div className="pt-24 px-8 max-w-[1000px] mx-auto">
+        <EmptyState 
+          title="No History Found"
+          description="You haven't completed any compliance assessments yet. Start your first simulation to see your compliance evolution."
+          actionLabel="Run Compliance Check"
+          actionHref="/simulate"
+        />
+      </div>
+    );
+  }
+
+  // Calculate average score
+  const avgScore = Math.round(runs.reduce((acc, run) => acc + run.score, 0) / runs.length);
+  const latestScore = runs[0]?.score || 0;
+
   return (
-    <div className="pt-24 pb-20 px-8 min-h-screen bg-background animate-fade-in relative">
-      <div className="absolute inset-0 linear-grid mask-fade-top opacity-5 pointer-events-none" />
-      
-      <div className="max-w-[1200px] mx-auto space-y-20 relative z-10">
+    <div className="pt-24 pb-20 px-8 min-h-screen animate-fade-in">
+      <div className="max-w-[1000px] mx-auto space-y-16">
         
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-12 border-b border-white/[0.08] pb-16">
-          <div className="space-y-8">
-            <div className="inline-flex items-center space-x-3 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-[10px] font-bold text-text-muted uppercase tracking-[0.3em]">
-               <History className="w-3.5 h-3.5" />
-               <span>Policy Performance Ledger</span>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/[0.08] pb-12">
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3 text-[10px] font-bold text-text-muted uppercase tracking-[0.4em]">
+              <History className="w-3.5 h-3.5" />
+              <span>Governance Evolution Ledger</span>
             </div>
-            
-            <h1 className="text-4xl md:text-5xl font-black tracking-tightest text-white leading-tight">
-              Compliance Evolution
-            </h1>
-            <p className="text-text-secondary text-lg font-medium max-w-xl leading-relaxed">
-              Historical ledger of policy health and structural alignment against evolving regulatory circular trends.
+            <h1 className="text-4xl font-bold tracking-tightest text-white">Compliance Timeline</h1>
+            <p className="text-text-secondary text-base font-medium max-w-xl">
+              Track your firm's regulatory drift and remediation history across all automated assessment cycles.
             </p>
           </div>
-          <div className="flex items-center gap-12 text-[11px] uppercase tracking-[0.3em] font-bold text-text-muted pb-2">
-             <div className="flex items-center space-x-3">
-                <Target className="w-4 h-4 text-primary-500" />
-                <span>Goal: 95.0%</span>
+          
+          <div className="flex items-center gap-10">
+             <div className="space-y-1">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Avg Stability</span>
+                <div className="text-2xl font-black text-white">{avgScore}%</div>
              </div>
-             <div className="flex items-center space-x-3">
-                <Clock className="w-4 h-4 text-primary-500" />
-                <span>Retention: 3.2Y</span>
+             <div className="h-10 w-px bg-white/10" />
+             <div className="space-y-1">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Latest Score</span>
+                <div className="text-2xl font-black text-success">{latestScore}%</div>
              </div>
           </div>
         </div>
 
-        {/* Aggregate Graph */}
-        <div className="linear-card p-16 space-y-16 shadow-[0_0_80px_rgba(255,255,255,0.01)]">
-          {!isLoading && (
-            <>
-              <div className="flex items-center justify-between">
-                 <div className="space-y-2">
-                    <h3 className="text-xl font-bold tracking-tight text-white">Compliance Flux Analysis</h3>
-                    <p className="text-[11px] text-text-muted uppercase tracking-[0.4em] font-bold">Trailing 6-month aggregate trust score</p>
-                 </div>
-                 <div className="text-right">
-                    <div className="text-5xl font-black tracking-tightest text-primary-500">
-                      {evolution.runs[evolution.runs.length - 1]?.score || 0}%
-                    </div>
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mt-1">LATEST INDEX</div>
-                 </div>
+        {/* Visual Trend - Minimalistic SVG Chart */}
+        <div className="linear-card p-10 space-y-8 overflow-hidden relative">
+           <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                 <TrendingUp className="w-4 h-4 text-success" />
+                 <span className="text-xs font-bold text-white uppercase tracking-[0.2em]">Stability Trend</span>
               </div>
-
-              <div className="h-[350px] flex items-end justify-between gap-6 relative">
-                {evolution.runs.map((item, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center group/bar cursor-pointer">
-                    <div className="relative w-full flex flex-col items-center justify-end h-full">
-                      <div className="absolute -top-12 opacity-0 group-hover/bar:opacity-100 transition-all duration-300 -translate-y-2 group-hover/bar:translate-y-0 z-20">
-                         <div className="bg-white text-black px-4 py-2 rounded-xl text-[12px] font-black tracking-tightest shadow-2xl">
-                            {item.score}%
-                         </div>
-                      </div>
-                      <div 
-                        className={`w-full max-w-[60px] rounded-t-xl transition-all duration-700 bg-white/[0.04] border-x border-t border-white/[0.08] group-hover/bar:bg-white/[0.1] group-hover/bar:border-white/[0.2] ${
-                          item.change < 0 ? 'bg-risk-high/10 border-risk-high/20' : 
-                          item.change > 0 ? 'bg-primary-500/10 border-primary-500/20' : ''
-                        }`}
-                        style={{ height: `${item.score}%` }}
-                      />
-                    </div>
-                    <div className="mt-10 space-y-2 text-center">
-                      <div className="text-[11px] font-bold text-text-secondary uppercase tracking-widest">{new Date(item.date).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }).toUpperCase()}</div>
-                    </div>
-                  </div>
-                ))}
-                <div className="absolute left-0 right-0 top-0 h-full pointer-events-none">
-                   {[0, 25, 50, 75, 100].map(val => (
-                     <div key={val} className="absolute w-full h-px bg-white/[0.03]" style={{ bottom: `${val}%` }} />
-                   ))}
-                </div>
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Last {runs.length} Runs</span>
+           </div>
+           
+           <div className="h-40 w-full relative group">
+              <svg className="w-full h-full" viewBox="0 0 1000 100" preserveAspectRatio="none">
+                 <defs>
+                    <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                       <stop offset="0%" stopColor="rgba(59, 130, 246, 0.2)" />
+                       <stop offset="100%" stopColor="rgba(16, 185, 129, 0.5)" />
+                    </linearGradient>
+                 </defs>
+                 <path 
+                    d={`M ${runs.slice().reverse().map((run, i) => `${(i / (runs.length - 1 || 1)) * 1000},${100 - run.score}`).join(" L ")}`}
+                    fill="none"
+                    stroke="url(#lineGradient)"
+                    strokeWidth="3"
+                    className="drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                 />
+                 {runs.slice().reverse().map((run, i) => (
+                    <circle 
+                       key={i}
+                       cx={(i / (runs.length - 1 || 1)) * 1000} 
+                       cy={100 - run.score} 
+                       r="4" 
+                       className="fill-white stroke-background stroke-2 cursor-pointer hover:r-6 transition-all"
+                    />
+                 ))}
+              </svg>
+              <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[9px] font-bold text-text-muted uppercase tracking-tighter pt-4">
+                 <span>T-minus {runs.length} assessments</span>
+                 <span>Present</span>
               </div>
-            </>
-          )}
+           </div>
         </div>
 
-        {/* Ledger */}
+        {/* Timeline List */}
         <div className="space-y-8">
            <div className="flex items-center space-x-4 px-2">
               <Activity className="w-4 h-4 text-text-muted" />
-              <span className="text-[11px] font-bold text-text-muted uppercase tracking-[0.4em]">Audit Ledger // Verified Events</span>
+              <span className="text-[11px] font-bold text-text-muted uppercase tracking-[0.3em]">Execution History</span>
            </div>
-           
-           <div className="linear-card overflow-hidden">
-              <table className="w-full text-left font-sans">
-                 <thead>
-                    <tr className="border-b border-white/[0.08] text-[11px] font-bold uppercase tracking-[0.3em] text-text-muted bg-white/[0.01]">
-                       <th className="px-10 py-6">Issue Date</th>
-                       <th className="px-10 py-6">Modification Cycle</th>
-                       <th className="px-10 py-6">Trust Mapping</th>
-                       <th className="px-10 py-6 text-right">Encrypted Proof</th>
-                    </tr>
-                 </thead>
-                 <tbody className="text-[14px] font-medium text-white">
-                    {evolution.runs.map((item, i) => (
-                      <tr key={i} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors group cursor-pointer">
-                         <td className="px-10 py-6 text-text-secondary">{item.date}</td>
-                         <td className="px-10 py-6 uppercase tracking-tight text-text-muted">Sync Sequence #{Math.floor(i + 400)}</td>
-                         <td className="px-10 py-6">
-                            <div className="flex items-center space-x-4">
-                               <span className="font-bold">{item.score}%</span>
-                               {item.change > 0 && <ArrowUpRight className="w-4 h-4 text-primary-500" />}
-                               {item.change < 0 && <ArrowDownRight className="w-4 h-4 text-risk-high" />}
+
+           <div className="space-y-4">
+              {runs.map((run, i) => (
+                <div key={run.run_id} className="group relative">
+                   {/* Vertical line connecting runs */}
+                   {i !== runs.length - 1 && (
+                     <div className="absolute left-[27px] top-14 bottom-[-16px] w-px bg-white/5 group-hover:bg-white/10 transition-colors" />
+                   )}
+                   
+                   <div className="linear-card flex items-center p-6 gap-8 hover:border-white/20 transition-all cursor-pointer group/card">
+                      <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.05] flex flex-col items-center justify-center shrink-0 group-hover/card:bg-white/[0.06] transition-all">
+                         <span className="text-[10px] font-black text-text-muted uppercase tracking-tighter">Score</span>
+                         <span className="text-lg font-black text-white">{run.score}</span>
+                      </div>
+
+                      <div className="flex-1 space-y-1">
+                         <div className="flex items-center gap-3">
+                            <h3 className="font-bold text-white text-base tracking-tight uppercase">Run {run.run_id.replace('run_', '')}</h3>
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-widest ${
+                              run.risk_level === 'high' ? 'text-risk-high border-risk-high/20 bg-risk-high/5' : 
+                              'text-success border-success/20 bg-success/5'
+                            }`}>
+                               {run.risk_level} Risk detected
+                            </span>
+                         </div>
+                         <div className="flex items-center space-x-4 text-[11px] font-medium text-text-secondary">
+                            <div className="flex items-center gap-1.5">
+                               <Calendar className="w-3 h-3 opacity-50" />
+                               {new Date(run.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </div>
-                         </td>
-                         <td className="px-10 py-6 text-right">
-                            <ChevronRight className="w-4 h-4 ml-auto text-text-muted opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
-                         </td>
-                      </tr>
-                    ))}
-                 </tbody>
-              </table>
+                            <div className="w-1 h-1 rounded-full bg-white/10" />
+                            <div>{run.changes_count} compliance conflicts identified</div>
+                         </div>
+                      </div>
+
+                      <div className="flex items-center gap-6">
+                         <Link 
+                            href="/dashboard"
+                            className="p-3 rounded-xl hover:bg-white/5 text-text-muted hover:text-white transition-all order-2"
+                         >
+                            <ChevronRight className="w-5 h-5" />
+                         </Link>
+                         <Link 
+                            href="/impact-report"
+                            className="hidden md:flex items-center gap-2 px-4 h-9 rounded-lg border border-white/5 text-[11px] font-bold text-text-muted hover:text-white hover:bg-white/5 transition-all uppercase tracking-widest"
+                         >
+                            <span>Archive JSON</span>
+                            <ArrowUpRight className="w-3 h-3" />
+                         </Link>
+                      </div>
+                   </div>
+                </div>
+              ))}
            </div>
         </div>
-        
-        <div className="flex justify-center pt-20">
-           <Link href="/simulate" className="linear-button-primary h-14 px-12 group">
-              Initiate New Compliance Cycle
-              <ArrowRight className="w-5 h-5 ml-3 transition-transform group-hover:translate-x-1" />
+
+        <div className="flex justify-center pt-8">
+           <Link 
+              href="/simulate" 
+              className="linear-button-secondary h-12 px-10 text-xs font-bold uppercase tracking-[0.2em]"
+           >
+              Initiate New Cycle
            </Link>
         </div>
       </div>

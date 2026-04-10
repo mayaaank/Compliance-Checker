@@ -16,6 +16,8 @@ import { getLatestReport, Report } from "@/lib/api";
 
 export default function ImpactReportPage() {
   const [report, setReport] = useState<Report | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchReport() {
@@ -23,13 +25,36 @@ export default function ImpactReportPage() {
         const data = await getLatestReport();
         setReport(data);
       } catch (err) {
-        console.error(err);
+        setError(err instanceof Error ? err.message : "Failed to load report");
+      } finally {
+        setIsLoading(false);
       }
     }
     fetchReport();
   }, []);
 
-  const changes = report?.changes || [];
+  if (isLoading) {
+    return (
+      <div className="pt-24 px-8 max-w-[900px] mx-auto space-y-12 animate-fade-in">
+        <div className="h-10 w-64 bg-white/5 rounded-lg animate-pulse" />
+        <div className="h-[600px] bg-white/[0.02] border border-white/[0.05] rounded-3xl animate-pulse" />
+      </div>
+    );
+  }
+
+  if (error || !report) {
+    return (
+      <div className="pt-24 px-8 max-w-[900px] mx-auto">
+        <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-6">
+           <Activity className="w-12 h-12 text-text-muted opacity-20" />
+           <p className="text-text-secondary font-medium">{error || "No assessment data available."}</p>
+           <Link href="/simulate" className="linear-button-primary h-11">Run Assessment Cycle</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const changes = report.changes || [];
   const highRisks = changes.filter(c => c.risk === "high").length;
   const totalRisks = changes.length;
 
@@ -106,6 +131,11 @@ export default function ImpactReportPage() {
                         <div className="space-y-4 flex-1">
                            <div className="flex items-center space-x-4">
                               <h4 className="font-bold text-white uppercase tracking-tight text-lg print:text-black">{change.affected_section}</h4>
+                              {change.trace_reference?.trace_id && (
+                                <span className="text-[10px] font-mono text-text-muted bg-white/5 px-2 py-0.5 rounded border border-white/10 uppercase">
+                                  {change.trace_reference.trace_id}
+                                </span>
+                              )}
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border uppercase tracking-widest ${
                                 change.risk === 'high' ? 'text-risk-high border-risk-high/30 bg-risk-high/5' : 
                                 change.risk === 'medium' ? 'text-risk-medium border-risk-medium/30 bg-risk-medium/5' : 'text-risk-low border-risk-low/30 bg-risk-low/5'

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { ToastProvider } from "@/components/ToastProvider";
 import { PageTransition } from "@/components/PageTransition";
 
@@ -35,6 +36,7 @@ export default function RootLayout({
               {children}
             </PageTransition>
           </main>
+          <Footer />
         </ToastProvider>
       </body>
     </html>
