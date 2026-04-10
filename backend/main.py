@@ -1,11 +1,24 @@
 import json
+import os
+import sys
+import logging
+import fcntl
 import time
 import shutil
 from pathlib import Path
 from datetime import datetime
-from fastapi import FastAPI, HTTPException
+from contextlib import contextmanager
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from backend.utils.config import SHARED_DATA_PATH
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    stream=sys.stdout
+)
+logger = logging.getLogger("compliance-api")
 
 app = FastAPI(
     title="Compliance Checker API",
@@ -13,7 +26,6 @@ app = FastAPI(
     version="2.0.0",
 )
 
-# ── CORS ───────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -22,7 +34,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Helpers ────────────────────────────────────────────────────────────────
+
+@contextmanager
+def file_lock(lock_path: Path, timeout: float = 5.0):
+    """Acquire file lock for concurrency control."""
+    lock_file = None
+    start_time = time.time()
+    try:
+        lock_file = open(lock_path, 'w')
+        while True:
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.time() - start_time >= timeout:
+                    raise TimeoutError("Could not acquire file lock within timeout")
+                time.sleep(0.1)
+        yield
+    finally:
+        if lock_file:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+            lock_file.close()
+
 
 def shared_path(filename: str) -> Path:
     return Path(SHARED_DATA_PATH) / filename
@@ -31,182 +64,158 @@ def shared_path(filename: str) -> Path:
 def read_json(filename: str):
     """Read a JSON file from shared_data/. Returns None if missing or empty."""
     path = shared_path(filename)
-    if not path.exists() or path.stat().st_size == 0:
-        return None
-    with open(path, "r") as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
+    try:
+        if not path.exists() or path.stat().st_size == 0:
+            logger.debug(f"File {filename} does not exist or is empty")
             return None
+        with open(path, "r") as f:
+            data = json.load(f)
+            logger.debug(f"Successfully read {filename}")
+            return data
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error in {filename}: {e}")
+        return None
+    except OSError as e:
+        logger.error(f"OS error reading {filename}: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error reading {filename}: {e}")
+        return None
 
 
 def write_json(filename: str, data: dict):
     """Write a dict as JSON to shared_data/."""
     path = shared_path(filename)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
-
-
-def get_next_run_id() -> str:
-    """Derive the next run ID from evolution_history.json."""
-    history = read_json("evolution_history.json")
-    if not history or not history.get("runs"):
-        return "run_1"
-    last_run = history["runs"][-1]["run_id"]  # e.g. "run_1"
     try:
-        num = int(last_run.split("_")[1]) + 1
-    except (IndexError, ValueError):
-        num = len(history["runs"]) + 1
-    return f"run_{num}"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w") as f:
+            json.dump(data, f, indent=2)
+        logger.debug(f"Successfully wrote {filename}")
+    except OSError as e:
+        logger.error(f"OS error writing {filename}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to write {filename}: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error writing {filename}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to write {filename}: {e}")
+
+
+def run_agent_sync():
+    """Sync wrapper to run the agent. FastAPI will run this in a threadpool."""
+    logger.info("Starting background compliance agent")
+    try:
+        from backend.crew import ComplianceOrchestratorAgent
+        agent = ComplianceOrchestratorAgent()
+        agent.run()
+        logger.info("Background compliance agent completed successfully")
+    except Exception as e:
+        logger.error(f"Background agent failed: {e}", exc_info=True)
+        try:
+            write_json("simulation_results.json", {
+                "status": "error",
+                "error": str(e),
+                "timestamp": ""
+            })
+        except Exception as write_err:
+            logger.error(f"Failed to write error status: {write_err}")
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────
 
 @app.post("/run_compliance_crew")
-async def run_compliance_crew():
+async def run_compliance_crew(background_tasks: BackgroundTasks):
     """
     Triggers the ComplianceOrchestratorAgent pipeline.
-    - Calls crew.py
-    - Writes results to all three shared_data/ JSON files
-    - Returns run summary on success
-    - Returns HTTP 500 with readable message on failure
+    Uses BackgroundTasks to prevent freezing and file locking to prevent duplicate runs.
     """
-    run_id = get_next_run_id()
-    start_time = time.time()
-
-    # Mark as running immediately so frontend poller sees it
-    write_json("simulation_results.json", {
-        "run_id": run_id,
-        "status": "running",
-        "steps_completed": [],
-        "duration_seconds": 0,
-    })
+    lock_path = shared_path(".lock")
 
     try:
-        from backend.crew import ComplianceOrchestratorAgent
-        agent = ComplianceOrchestratorAgent()
-        result = agent.run()
+        with file_lock(lock_path, timeout=1.0):
+            status_data = read_json("simulation_results.json")
 
-    except NotImplementedError:
-        # crew.py is still a stub — write a clean failure state
-        write_json("simulation_results.json", {
-            "run_id": run_id,
-            "status": "failed",
-            "error": "crew.py not implemented yet — AI Dev needs to complete Phase 2",
-            "steps_completed": [],
-            "duration_seconds": 0,
-        })
-        raise HTTPException(
-            status_code=500,
-            detail="Pipeline not implemented yet. AI Dev must complete crew.py Phase 2."
-        )
+            if status_data and status_data.get("status") == "running":
+                logger.warning(f"Pipeline already running: {status_data.get('run_id')}")
+                return {
+                    "status": "already_running",
+                    "message": "A compliance check is already in progress.",
+                    "run_id": status_data.get("run_id")
+                }
 
+            logger.info("Starting new compliance pipeline")
+            write_json("simulation_results.json", {
+                "status": "starting",
+                "timestamp": ""
+            })
+
+    except TimeoutError:
+        logger.warning("Could not acquire lock - pipeline may be starting")
+        return {
+            "status": "busy",
+            "message": "Pipeline is busy, please try again.",
+        }
     except Exception as e:
-        # Any other pipeline error
-        duration = round(time.time() - start_time, 2)
-        write_json("simulation_results.json", {
-            "run_id": run_id,
-            "status": "failed",
-            "error": str(e),
-            "steps_completed": [],
-            "duration_seconds": duration,
-        })
-        raise HTTPException(
-            status_code=500,
-            detail=f"Pipeline error: {str(e)}"
-        )
+        logger.error(f"Error starting pipeline: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
-    # ── Pipeline succeeded — write all three JSON files ────────────────────
-
-    duration = round(time.time() - start_time, 2)
-    timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")
-
-    # 1. simulation_results.json
-    write_json("simulation_results.json", {
-        "run_id": run_id,
-        "status": "complete",
-        "steps_completed": ["scrape", "diff", "rag_map", "amend", "report", "evolve"],
-        "duration_seconds": duration,
-    })
-
-    # 2. latest_report.json
-    # result from crew.py must match the locked schema
-    report = result if isinstance(result, dict) else {}
-    report["run_id"] = run_id
-    report["timestamp"] = timestamp
-    write_json("latest_report.json", report)
-
-    # 3. evolution_history.json — append new run score
-    history = read_json("evolution_history.json") or {"runs": []}
-    history["runs"].append({
-        "run_id": run_id,
-        "score": report.get("evolution_score", 0),
-        "timestamp": timestamp,
-    })
-    write_json("evolution_history.json", history)
+    background_tasks.add_task(run_agent_sync)
 
     return {
-        "status": "complete",
-        "run_id": run_id,
-        "duration_seconds": duration,
-        "evolution_score": report.get("evolution_score", 0),
-        "risk_level": report.get("risk_level", "unknown"),
-        "changes_detected": len(report.get("changes", [])),
+        "status": "started",
+        "message": "Compliance pipeline started in background.",
     }
 
 
 @app.get("/status")
 async def get_status():
-    """
-    Returns the current run status from simulation_results.json.
-    Frontend polls this every 3 seconds during the live-agents screen.
-    Returns clean empty state if file doesn't exist yet.
-    """
+    """Returns the current run status from simulation_results.json."""
     data = read_json("simulation_results.json")
     if data is None:
+        logger.info("Status requested - not started")
         return {"status": "not_started"}
+    logger.debug(f"Status: {data.get('status')}")
     return data
 
 
 @app.get("/report")
 async def get_report():
-    """
-    Returns the latest compliance report from latest_report.json.
-    Returns clean empty state if no report exists yet.
-    """
+    """Returns the latest compliance report from latest_report.json."""
     data = read_json("latest_report.json")
     if data is None:
+        logger.info("Report requested - not available")
         return {
             "message": "No report available yet. Run a compliance check first.",
             "empty": True,
         }
+    logger.debug(f"Report returned for run_id: {data.get('run_id')}")
     return data
 
 
 @app.get("/evolution")
 async def get_evolution():
-    """
-    Returns the evolution history from evolution_history.json.
-    Returns empty runs list if no history exists yet.
-    """
+    """Returns the evolution history from evolution_history.json."""
     data = read_json("evolution_history.json")
     if data is None:
+        logger.info("Evolution history - empty")
         return {"runs": []}
+    logger.debug(f"Evolution history: {len(data.get('runs', []))} runs")
     return data
 
 
 @app.post("/reset")
 async def reset():
-    """
-    Resets demo state between judge presentations.
-    - Clears all three shared_data/ JSON files
-    - Restores internal_policy.pdf from backup (if backup exists)
-    """
-    # Clear shared_data/ JSON files
-    write_json("latest_report.json", {})
-    write_json("evolution_history.json", {"runs": []})
-    write_json("simulation_results.json", {"status": "not_started"})
+    """Resets demo state. Clears shared_data/ JSON files and restores backup PDF."""
+    lock_path = shared_path(".lock")
+
+    try:
+        with file_lock(lock_path):
+            logger.info("Resetting demo state")
+            write_json("latest_report.json", {})
+            write_json("evolution_history.json", {"runs": []})
+            write_json("simulation_results.json", {"status": "not_started"})
+            logger.info("Demo state reset complete")
+    except Exception as e:
+        logger.error(f"Error resetting demo: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
     # Restore internal_policy.pdf from backup if it exists
     policy_path = Path("backend/data/company_docs/internal_policy.pdf")
@@ -216,6 +225,7 @@ async def reset():
     if backup_path.exists():
         shutil.copy2(backup_path, policy_path)
         pdf_restored = True
+        logger.info("Restored internal_policy.pdf from backup")
 
     return {
         "status": "reset",

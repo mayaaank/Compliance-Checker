@@ -7,6 +7,7 @@ import shutil
 import tempfile
 import warnings
 import requests
+import re
 from dotenv import load_dotenv
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -39,12 +40,18 @@ def _get_run_id() -> str:
         return "run_1"
 
 
+def _clean_text(text: str) -> str:
+    # Strip Devanagari script (Hindi/Marathi) and clean spacing
+    text = re.sub(r'[\u0900-\u097F]+', '', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
 def _extract_pdf_text(path: str) -> str:
     try:
         doc = fitz.open(path)
         text = " ".join(page.get_text() for page in doc)
         doc.close()
-        return text
+        return _clean_text(text)
     except Exception as e:
         print(f"   ⚠ Could not read {path}: {e}")
         return ""
@@ -319,6 +326,7 @@ class ComplianceOrchestratorAgent:
         for change in changes:
             prompt = (
                 "You are an expert regulatory compliance officer for an Indian NBFC.\n"
+                "Extract regulatory changes and convert them into corporate amendments.\n"
                 "Draft a concise, professional amendment (2-4 sentences only).\n"
                 "Return ONLY the amended clause text. No preamble, no explanation.\n\n"
                 f"Old clause: {change.get('old_text', '')[:300]}\n"
