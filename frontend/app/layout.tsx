@@ -1,0 +1,36 @@
+import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
+import "./globals.css";
+import Navbar from "@/components/Navbar";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
+
+export const metadata: Metadata = {
+  title: "Compliance Checker | Know what changed. Fix it before you're fined.",
+  description: "Automated regulatory compliance tool for RBI/SEBI/MCA circulars.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans`}>
+        <Navbar />
+        <main className="min-h-screen">
+          {children}
+        </main>
+      </body>
+    </html>
+  );
+}
