@@ -1,28 +1,77 @@
-# Python
+# -------------------------
+# Python Environment
+# -------------------------
+venv/
+.venv/
+env/
+ENV/
 backend/venv/
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+*.so
 .Python
+build/
+dist/
+.eggs/
 *.egg-info/
+*.egg
 
-# ChromaDB runtime data
-backend/data/chroma_db/
-
-# Environment
+# -------------------------
+# Environment Variables
+# -------------------------
 .env
+.env.*
+!.env.example
 
-# Node
-frontend/node_modules/
-frontend/.next/
-frontend/.env.local
+# -------------------------
+# Data & Runtime Files
+# -------------------------
+# Ignore all files in data directories to prevent committing PII/large files
+backend/data/raw_circulars/*
+!backend/data/raw_circulars/.gitkeep
 
-# macOS
+backend/data/previous_circulars/*
+!backend/data/previous_circulars/.gitkeep
+
+backend/data/company_docs/*
+!backend/data/company_docs/.gitkeep
+
+backend/data/chroma_db/*
+!backend/data/chroma_db/.gitkeep
+
+shared_data/*
+!shared_data/.gitkeep
+
+*.sqlite3
+*.db
+*.log
+
+# -------------------------
+# Frontend / Node
+# -------------------------
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.eslintcache
+.turbo/
+
+# -------------------------
+# OS / IDE Configs
+# -------------------------
 .DS_Store
 .AppleDouble
-.LSOverride
+._*
+.vscode/
+.idea/
+*.swp
+*.swo
+.kilo/
 
-# Bash setup files (run once, then delete)
+# -------------------------
+# Helper Scripts (Optional)
+# -------------------------
 phase1_backend_scaffold.sh
 phase1_ai_setup.sh
 phase1_frontend_setup.sh
