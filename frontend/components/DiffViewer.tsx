@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, X, Code2, Zap } from "lucide-react";
 import { useToast } from "./ToastProvider";
+import DeclineAmendmentModal, { RejectionRecord } from "./DeclineAmendmentModal";
 
 interface DiffViewerProps {
   amendments: Array<{
@@ -14,22 +15,51 @@ interface DiffViewerProps {
 
 export default function DiffViewer({ amendments }: DiffViewerProps) {
   const [decisions, setDecisions] = useState<Record<string, "accepted" | "rejected" | null>>({});
+  const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
+  const [activeAmendment, setActiveAmendment] = useState<{id: string, title: string} | null>(null);
   const { showToast } = useToast();
 
   const handleDecision = (id: string, action: "accepted" | "rejected") => {
+    if (action === "rejected") {
+      const amendment = amendments.find(a => a.id === id);
+      if (amendment) {
+        setActiveAmendment({ id: amendment.id, title: amendment.title });
+        setIsDeclineModalOpen(true);
+      }
+      return;
+    }
+    
     setDecisions(prev => ({ ...prev, [id]: action }));
-    showToast(`Amendment ${action === "accepted" ? "approved" : "dismissed"}.`, action === "accepted" ? "success" : "info");
+    showToast(`Amendment approved. Policy updated.`, "success");
+  };
+
+  const handleRejectionSubmit = (rejectionData: RejectionRecord) => {
+    // Save to localStorage
+    const existingRejections = JSON.parse(localStorage.getItem("rejectedReasons") || "[]");
+    localStorage.setItem("rejectedReasons", JSON.stringify([...existingRejections, rejectionData]));
+    
+    setDecisions(prev => ({ ...prev, [rejectionData.change_id]: "rejected" }));
+    showToast("Rejection audit record synchronized.", "info");
+    setIsDeclineModalOpen(false);
   };
 
   return (
     <div className="space-y-8">
+      {activeAmendment && (
+        <DeclineAmendmentModal 
+          isOpen={isDeclineModalOpen}
+          onClose={() => setIsDeclineModalOpen(false)}
+          onSubmit={handleRejectionSubmit}
+          amendment={activeAmendment}
+        />
+      )}
       <div className="flex items-center justify-between px-2">
-        <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-[0.4em] flex items-center gap-4">
-          <Code2 className="w-4 h-4" />
+        <h3 className="text-[13px] font-bold text-white uppercase tracking-[0.4em] flex items-center gap-4">
+          <Code2 className="w-5 h-5" />
           Neural Drafting Sequence
         </h3>
-        <button className="text-[10px] font-bold text-white hover:text-white/70 uppercase tracking-[0.3em] transition-colors flex items-center gap-2 group">
-          <Zap className="w-3.5 h-3.5 fill-transparent group-hover:fill-current transition-all" />
+        <button className="text-[11px] font-bold text-white hover:text-white uppercase tracking-[0.4em] transition-colors flex items-center gap-2 group">
+          <Zap className="w-4 h-4 fill-white transition-all shadow-premium" />
           <span>Synchronize Ledger</span>
         </button>
       </div>

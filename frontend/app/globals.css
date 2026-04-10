@@ -3,83 +3,85 @@
 @tailwind utilities;
 
 :root {
-  --background: #0b0b0d;
-  --foreground: #f4f5f8;
+  --background: #080808;
+  --foreground: #ffffff;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
 @layer components {
   .linear-card {
-    background-color: rgba(26, 26, 30, 0.4);
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 1rem; /* rounded-2xl for that premium feel */
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    background-color: #111111;
+    border: 1px solid #1e1e1e;
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .linear-card-hover {
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  
   .linear-card-hover:hover {
-    background-color: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.15);
-    transform: translateY(-2px);
+    background-color: #141414;
+    border-color: #2e2e2e;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 4px 12px rgba(0, 0, 0, 0.4);
   }
 
   .linear-button-primary {
-    height: 2.75rem; /* h-11 */
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-    background-color: #f4f5f8; /* White text background like Linear CTA */
-    color: #0b0b0d;
-    font-weight: 600;
-    border-radius: 0.75rem;
-    font-size: 0.875rem;
-    transition-property: all;
-    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-    transition-duration: 300ms;
+    height: 38px;
+    padding-left: 16px;
+    padding-right: 16px;
+    background-color: #ffffff;
+    color: #080808;
+    font-weight: 500;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
   
   .linear-button-primary:hover {
-    background-color: #ffffff;
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+    background-color: #f4f4f5;
     transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
   }
 
   .linear-button-secondary {
-    height: 2.75rem;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-    background-color: rgba(255, 255, 255, 0.03);
-    color: #f4f5f8;
+    height: 38px;
+    padding-left: 16px;
+    padding-right: 16px;
+    background-color: rgba(255, 255, 255, 0.04);
+    color: #ffffff;
     border: 1px solid rgba(255, 255, 255, 0.08);
     font-weight: 500;
-    border-radius: 0.75rem;
-    font-size: 0.875rem;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 8px;
   }
   
   .linear-button-secondary:hover {
-    background-color: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
   }
 
   .text-reveal-mask {
@@ -87,7 +89,7 @@ body {
   }
 
   .text-gradient-white {
-    background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0.5) 100%);
+    background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0.6) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -95,7 +97,7 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -103,12 +105,16 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 9999px;
+  background: #1e1e1e;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #2e2e2e;
 }
 
 ::selection {
-  background-color: rgba(59, 130, 246, 0.3);
+  background-color: rgba(94, 106, 210, 0.4);
   color: #ffffff;
 }
 
@@ -117,7 +123,7 @@ body {
   background-image: 
     linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 40px 40px;
+  background-size: 32px 32px;
 }
 
 .mask-fade-bottom {
