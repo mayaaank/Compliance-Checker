@@ -1,0 +1,25 @@
+{
+  "runs": [
+    {
+      "run_id": "run_1",
+      "score": 95,
+      "timestamp": "2026-04-10T16:30:04.564780",
+      "risk_level": "high",
+      "changes_count": 1
+    },
+    {
+      "run_id": "run_2",
+      "score": 95,
+      "timestamp": "2026-04-10T19:32:26.987253",
+      "risk_level": "high",
+      "changes_count": 1
+    },
+    {
+      "run_id": "run_3",
+      "score": 95,
+      "timestamp": "2026-04-10T19:36:13.276812",
+      "risk_level": "high",
+      "changes_count": 1
+    }
+  ]
+}

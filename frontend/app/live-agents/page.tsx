@@ -44,63 +44,54 @@ export default function LiveAgentsPage() {
     logEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-useEffect(() => {
-  let agent = 1;
-  let logIndex = 0;
-
-  const tick = setInterval(() => {
-    if (agent > 6) {
-      clearInterval(tick);
-      return;
-    }
-
-    const stageLines = STAGE_LOGS[agent] || [];
-    if (logIndex < stageLines.length) {
-      setLogs(l => [...l, { time: now(), text: stageLines[logIndex], type: "info" }]);
-      logIndex++;
-    } else {
-      setLogs(l => [...l, { time: now(), text: `✓ ${AGENTS[agent - 1].name} — complete`, type: "success" }]);
-      logIndex = 0;
-      agent++;
-
-      if (agent <= 6) {
-        setCurrentAgent(agent);
-      } else {
-        // All done — cap at 6, mark animation complete
-        setCurrentAgent(6);
-        clearInterval(tick);
-        animDone.current = true;
-      }
-    }
-  }, 900);
-
-  return () => clearInterval(tick);
-}, []);
-  // Poll backend status every 3s
   useEffect(() => {
     pollingRef.current = setInterval(async () => {
       try {
         const status = await getStatus();
-        if (status.status === "complete" && animDone.current) {
-          clearInterval(pollingRef.current!);
-          router.push("/dashboard");
-        } else if (status.status === "complete" && !animDone.current) {
-          // Backend done but animation still running — wait for animation
-          const waitForAnim = setInterval(() => {
-            if (animDone.current) {
-              clearInterval(waitForAnim);
-              clearInterval(pollingRef.current!);
-              router.push("/dashboard");
-            }
-          }, 500);
-        } else if (status.status === "failed") {
+        
+        // Map backend steps to current agent
+        const stepsCount = status.steps_completed?.length || 0;
+        
+        if (status.status === "failed") {
           clearInterval(pollingRef.current!);
           setPipelineError(status.error || "Pipeline failed — check backend logs");
+          return;
         }
-      } catch {
-        // Backend unreachable — animation still runs, redirect on anim end
+
+        // Keep currentAgent bounded between 1 and 6 based on steps
+        const currentStep = Math.min(6, stepsCount + 1);
+        setCurrentAgent(currentStep);
+
+        // Manage logs smoothly based on the step transition
+        if (currentStep > 1 && currentStep <= 6) {
+           const prevAgent = AGENTS[currentStep - 2].name;
+           const currAgent = AGENTS[currentStep - 1].name;
+           const currTask = AGENTS[currentStep - 1].task;
+           
+           setLogs(prev => {
+             // Only insert new logs if the step actually moved forward
+             if (!prev.some(log => log.text.includes(currTask))) {
+                return [
+                  ...prev,
+                  { time: now(), text: `✓ ${prevAgent} — complete`, type: "success" },
+                  { time: now(), text: `[SYSTEM] Handoff to ${currAgent}...`, type: "system" },
+                  { time: now(), text: currTask, type: "info" }
+                ];
+             }
+             return prev;
+           });
+        }
+
+        if (status.status === "complete") {
+          clearInterval(pollingRef.current!);
+          setLogs(prev => [...prev, { time: now(), text: `✓ ${AGENTS[5].name} — complete`, type: "success" }]);
+          setTimeout(() => router.push("/dashboard"), 1500);
+        }
+
+      } catch (err) {
+        console.warn("Backend unreachable during poll.");
       }
-    }, 3000);
+    }, 1500);
 
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
   }, [router]);

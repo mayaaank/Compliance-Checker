@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight } from "lucide-react";
+import { AlertTriangle, ShieldCheck, ShieldAlert } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface RiskCardProps {
   id: string;
@@ -10,35 +11,40 @@ interface RiskCardProps {
 }
 
 export default function RiskCard({ title, description, level }: RiskCardProps) {
-  const icons = {
-    high: AlertTriangle,
-    medium: AlertCircle,
-    low: CheckCircle2,
+  const config = {
+    high: {
+      icon: ShieldAlert,
+      color: "text-risk-high bg-risk-high/10 border-risk-high/20",
+      label: "Critical Conflict",
+    },
+    medium: {
+      icon: AlertTriangle,
+      color: "text-risk-medium bg-risk-medium/10 border-risk-medium/20",
+      label: "Moderate Drift",
+    },
+    low: {
+      icon: ShieldCheck,
+      color: "text-risk-low bg-risk-low/10 border-risk-low/20",
+      label: "Minor Optimization",
+    },
   };
 
-  const riskColors = {
-    high: "text-risk-high border-risk-high/30 bg-risk-high/10",
-    medium: "text-risk-medium border-risk-medium/30 bg-risk-medium/10",
-    low: "text-risk-low border-risk-low/30 bg-risk-low/10",
-  };
-
-  const Icon = icons[level];
+  const { icon: Icon, color, label } = config[level];
 
   return (
-    <div className="linear-card p-6 flex items-start gap-5 cursor-pointer linear-card-hover group border-white/[0.08] hover:border-white/20">
-      <div className={`mt-0.5 p-2 rounded-xl border ${riskColors[level]} shadow-[0_0_15px_rgba(0,0,0,0.2)]`}>
-        <Icon className="w-4 h-4" />
+    <div className="linear-card p-5 space-y-4 group hover:bg-white/[0.04] transition-all">
+      <div className="flex items-center justify-between">
+         <div className={cn("px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-widest", color)}>
+           {label}
+         </div>
+         <Icon className={cn("w-4 h-4", level === 'high' ? 'text-risk-high' : 'text-text-muted')} />
       </div>
-      <div className="flex-1 space-y-2">
-        <div className="flex items-center justify-between">
-          <h4 className="text-[14px] font-black text-white uppercase tracking-tight leading-none">{title}</h4>
-          <span className={`text-[9px] font-black uppercase tracking-[0.2em] opacity-40 group-hover:opacity-100 transition-opacity`}>{level}</span>
-        </div>
-        <p className="text-[12px] text-text-secondary leading-relaxed font-medium pr-4">
-          {description}
-        </p>
+      <div className="space-y-2">
+         <h4 className="text-sm font-bold text-white uppercase tracking-tight line-clamp-1">{title}</h4>
+         <p className="text-[12px] font-medium text-text-secondary leading-relaxed line-clamp-2">
+           {description}
+         </p>
       </div>
-      <ChevronRight className="w-4 h-4 text-text-muted mt-0.5 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
     </div>
   );
 }

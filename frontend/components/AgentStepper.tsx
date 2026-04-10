@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Loader2, LucideIcon } from "lucide-react";
+import { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Agent {
   id: number;
@@ -16,55 +17,45 @@ interface AgentStepperProps {
 
 export default function AgentStepper({ activeAgent, agents }: AgentStepperProps) {
   return (
-    <div className="w-full space-y-4">
-      {agents.map((agent, i) => {
-        const isComplete = i + 1 < activeAgent;
-        const isActive = i + 1 === activeAgent;
+    <div className="space-y-4">
+      {agents.map((agent) => {
         const Icon = agent.icon;
+        const isActive = activeAgent === agent.id;
+        const isCompleted = activeAgent > agent.id;
 
         return (
-          <div
-            key={i}
-            className={`
-              flex items-center space-x-6 p-6 rounded-2xl border transition-all duration-700
-              ${isActive ? "bg-white/[0.04] border-white/10 shadow-[0_0_50px_rgba(255,255,255,0.02)] scale-100" : "border-transparent opacity-30 scale-95"}
-              ${isComplete ? "opacity-20" : "opacity-100"}
-            `}
+          <div 
+            key={agent.id}
+            className={cn(
+              "flex items-start gap-6 p-6 rounded-2xl border transition-all duration-500",
+              isActive ? "bg-white/[0.04] border-white/20 shadow-[0_0_40px_rgba(255,255,255,0.03)] scale-[1.02]" : "border-transparent opacity-40"
+            )}
           >
-            <div
-              className={`
-                w-12 h-12 rounded-xl flex items-center justify-center border transition-all duration-500
-                ${isComplete ? "bg-risk-low/10 border-risk-low/20 text-risk-low" : isActive ? "bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.2)]" : "bg-white/[0.02] border-white/[0.05] text-text-muted"}
-              `}
-            >
-              {isComplete ? (
-                <Check className="w-5 h-5 stroke-[4]" />
-              ) : isActive ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Icon className="w-5 h-5" />
-              )}
-            </div>
-            
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center space-x-3">
-                <span className={`text-[14px] font-black uppercase tracking-tight ${isActive ? "text-white" : "text-text-muted"}`}>
-                  {agent.name}
-                </span>
-                {isActive && <div className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(59,130,246,1)]" />}
-              </div>
-              <div className={`text-[12px] font-medium leading-relaxed ${isActive ? "text-text-secondary" : "text-text-muted opacity-60"}`}>
-                {isComplete ? "Handover successful." : isActive ? agent.task : "Awaiting resource queue..."}
-              </div>
+            <div className={cn(
+              "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-500",
+              isCompleted ? "bg-emerald-500/10 text-emerald-400" :
+              isActive ? "bg-primary-500/20 text-primary-400" : "bg-white/5 text-text-muted"
+            )}>
+              <Icon className={cn("w-6 h-6", isActive && "animate-pulse")} />
             </div>
 
-            {isActive && (
-              <div className="hidden sm:flex items-center space-x-1 opacity-20">
-                 <div className="w-1 h-4 bg-white rounded-full animate-pulse" />
-                 <div className="w-1 h-3 bg-white rounded-full animate-pulse delay-75" />
-                 <div className="w-1 h-5 bg-white rounded-full animate-pulse delay-150" />
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">Step 0{agent.id}</span>
+                {isCompleted && <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">Complete</span>}
               </div>
-            )}
+              <h3 className={cn(
+                "text-base font-bold transition-colors duration-500",
+                isActive || isCompleted ? "text-white" : "text-text-muted"
+              )}>
+                {agent.name}
+              </h3>
+              {isActive && (
+                <p className="text-sm font-medium text-text-secondary leading-relaxed animate-fade-in">
+                  {agent.task}
+                </p>
+              )}
+            </div>
           </div>
         );
       })}

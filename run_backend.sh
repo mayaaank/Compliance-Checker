@@ -8,7 +8,7 @@ OLLAMA_PID=$!
 sleep 2
 
 echo "Activating venv..."
-source backend/venv/bin/activate
+source venv/bin/activate
 
 echo "Starting FastAPI on port 8000..."
 uvicorn backend.main:app --reload --port 8000

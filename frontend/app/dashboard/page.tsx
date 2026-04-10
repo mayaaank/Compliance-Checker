@@ -63,18 +63,19 @@ export default function DashboardPage() {
     );
   }
 
-  // Derive summary counts from real changes array
-  const highCount   = report.changes.filter(c => c.risk === "high").length;
-  const mediumCount = report.changes.filter(c => c.risk === "medium").length;
-  const lowCount    = report.changes.filter(c => c.risk === "low").length;
-  const totalCount  = report.changes.length;
-  const amendedCount = report.changes.filter(c => c.amendment).length;
+  // Derive summary counts from real changes array - ensure changes exists
+  const changes = report.changes || [];
+  const highCount   = changes.filter(c => c.risk === "high").length;
+  const mediumCount = changes.filter(c => c.risk === "medium").length;
+  const lowCount    = changes.filter(c => c.risk === "low").length;
+  const totalCount  = changes.length;
+  const amendedCount = changes.filter(c => c.amendment).length;
 
   // Use first change for the comparison panel
-  const primaryChange = report.changes[0];
+  const primaryChange = changes[0];
 
   // Map changes to RiskCard shape
-  const riskCards = report.changes.map(c => ({
+  const riskCards = changes.map(c => ({
     id: c.change_id,
     title: c.affected_section || c.section_hint,
     description: c.new_text.slice(0, 140) + (c.new_text.length > 140 ? "…" : ""),
@@ -82,14 +83,14 @@ export default function DashboardPage() {
   }));
 
   // Map reference cases to FineSimulator shape
-  const referenceCases = report.fine_risk.reference_cases.map((rc, i) => ({
+  const referenceCases = (report.fine_risk?.reference_cases || []).map((rc, i) => ({
     id: `rc${i}`,
     case: rc.bank,
     fine: `₹${rc.amount_lakh}L`,
   }));
 
   // Map changes to DiffViewer amendments shape
-  const amendments = report.changes
+  const amendments = changes
     .filter(c => c.amendment)
     .map(c => ({
       id: c.change_id,
@@ -185,7 +186,7 @@ export default function DashboardPage() {
             <div className="space-y-6">
               <span className="text-[11px] font-bold text-text-muted uppercase tracking-[0.3em] px-2">Predictive Enforcement</span>
               <FineSimulator
-                probability={report.fine_risk.probability_percent}
+                probability={report.fine_risk?.probability_percent || 0}
                 referenceCases={referenceCases}
               />
             </div>

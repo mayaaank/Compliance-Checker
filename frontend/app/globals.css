@@ -1,7 +1,6 @@
-/* tailwindcss */
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   --background: #0b0b0d;
@@ -127,4 +126,15 @@ body {
 
 .mask-fade-top {
   mask-image: linear-gradient(to top, black 50%, transparent 100%);
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white !important;
+    color: black !important;
+  }
 }

@@ -5,20 +5,22 @@ import { useRouter } from "next/navigation";
 import { Upload, FileText, ArrowRight, Cpu, Layout, ShieldCheck } from "lucide-react";
 import FileUploadZone from "@/components/FileUploadZone";
 import { runComplianceCheck } from "@/lib/api";
+import { useToast } from "@/components/ToastProvider";
 
 export default function SimulatePage() {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const router = useRouter();
+  const { showToast } = useToast();
 
   const handleStartSimulation = async () => {
-    if (!file) return;
     setIsUploading(true);
     try {
+      showToast("Initializing Compliance Swarm...", "info");
       await runComplianceCheck();
       router.push("/live-agents");
     } catch (err) {
-      console.error(err);
+      showToast(err instanceof Error ? err.message : "Handshake failed", "error");
       setIsUploading(false);
     }
   };

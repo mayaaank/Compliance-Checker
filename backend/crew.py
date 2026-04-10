@@ -9,6 +9,7 @@ import warnings
 import requests
 import re
 from dotenv import load_dotenv
+from backend.utils.traceability import build_trace_reference
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -379,22 +380,21 @@ class ComplianceOrchestratorAgent:
             + medium * 2,
         ))
 
-        # Guarantee Run #2 always shows improvement
-        history_path = os.path.join(SHARED_DATA_PATH, "evolution_history.json")
-        try:
-            with open(history_path) as f:
-                history = json.load(f)
-            prev_runs = history.get("runs", [])
-            if prev_runs:
-                last_score = prev_runs[-1].get("score", 0)
-                score = min(98, max(score, last_score + 8))
-        except (FileNotFoundError, json.JSONDecodeError):
-            pass
+        # Add Traceability References to each change
+        source_ref = "RBI/2026/41"
+        for change in changes:
+            change["trace_reference"] = build_trace_reference(
+                circular_section=change.get("section_hint", "N/A"),
+                document_name=change.get("affected_document", "internal_policy.pdf"),
+                document_section=change.get("affected_section", "N/A"),
+                source_ref=source_ref,
+                run_id=self.run_id
+            )
 
         report = {
             "run_id": self.run_id,
             "timestamp": datetime.datetime.now().isoformat(),
-            "circular_source": "RBI/2026/41",
+            "circular_source": source_ref,
             "summary": f"{len(changes)} clause change(s) detected affecting internal policy and product catalog.",
             "risk_level": overall_risk,
             "changes": changes,
@@ -427,54 +427,85 @@ class ComplianceOrchestratorAgent:
 
         if os.path.exists(policy_path):
             shutil.copy2(policy_path, backup_path)
-            print("   → Backup of internal_policy.pdf created")
+            print("   → Backup created")
         else:
-            print("   ⚠ internal_policy.pdf not found — skipping PDF edit")
+            print("   ⚠ internal_policy.pdf not found")
             self._write_evolution_history(report)
             return
 
-        amendment_text = (
-            f"--- AUTO-APPLIED COMPLIANCE AMENDMENTS ---\n"
-            f"Run: {self.run_id}  |  {report['timestamp']}\n\n"
-        )
-        for change in report.get("changes", []):
-            if change.get("amendment"):
-                amendment_text += (
-                    f"[{change['affected_section']}] ({change.get('risk','').upper()} RISK)\n"
-                    f"{change['amendment']}\n\n"
-                )
-
-        tmp_path = None
         try:
             doc = fitz.open(policy_path)
-            new_page = doc.new_page(width=595, height=842)
+            page_width = 595
+            page_height = 842
+            new_page = doc.new_page(width=page_width, height=page_height)
 
-            new_page.insert_text((50, 50),
-                f"Compliance Amendments — {self.run_id}",
-                fontsize=13, fontname="helv", color=(0.2, 0.2, 0.7))
-            new_page.insert_text((50, 72),
-                f"Generated: {report['timestamp']}",
-                fontsize=8, fontname="helv", color=(0.5, 0.5, 0.5))
-            new_page.insert_text((50, 100),
-                amendment_text, fontsize=9, fontname="helv")
+            # --- Header ---
+            # Blue top bar
+            new_page.draw_rect(fitz.Rect(0, 0, page_width, 80), color=(0.1, 0.2, 0.4), fill=(0.1, 0.2, 0.4))
+            
+            new_page.insert_text((40, 35), "COMPLIANCE CHECKER", fontsize=18, fontname="helv-bold", color=(1, 1, 1))
+            new_page.insert_text((40, 55), f"AUTO-APPLIED POLICY AMENDMENTS | RUN: {self.run_id.upper()}", 
+                                fontsize=10, fontname="helv", color=(0.8, 0.8, 0.8))
+            
+            y_offset = 110
 
-            with tempfile.NamedTemporaryFile(
-                suffix=".pdf", delete=False, dir=COMPANY_DOCS_PATH
-            ) as tmp:
+            for change in report.get("changes", []):
+                if not change.get("amendment"): continue
+                
+                trace = change.get("trace_reference", {})
+                risk = change.get("risk", "low").upper()
+                
+                # Risk Color Logic
+                risk_colors = {
+                    "HIGH": (0.8, 0.1, 0.1),    # Red
+                    "MEDIUM": (0.9, 0.5, 0.1),  # Orange
+                    "LOW": (0.2, 0.6, 0.2)      # Green
+                }
+                color = risk_colors.get(risk, (0.5, 0.5, 0.5))
+
+                # --- Amendment Box ---
+                # Left Border (Risk Indicator)
+                new_page.draw_rect(fitz.Rect(40, y_offset, 45, y_offset + 120), color=color, fill=color)
+                
+                # Background
+                new_page.draw_rect(fitz.Rect(45, y_offset, page_width - 40, y_offset + 120), 
+                                 color=(0.97, 0.97, 0.98), fill=(0.97, 0.97, 0.98))
+                
+                # Trace ID & Metadata
+                new_page.insert_text((60, y_offset + 20), f"ID: {trace.get('trace_id', 'N/A')}", 
+                                   fontsize=9, fontname="helv-bold", color=(0.2, 0.2, 0.2))
+                new_page.insert_text((page_width - 150, y_offset + 20), f"RISK: {risk}", 
+                                   fontsize=9, fontname="helv-bold", color=color)
+                
+                # Section Header
+                new_page.insert_text((60, y_offset + 40), f"Target Section: {change['affected_section']}", 
+                                   fontsize=10, fontname="helv-bold")
+                
+                # Amendment Textbox
+                rect = fitz.Rect(60, y_offset + 50, page_width - 60, y_offset + 110)
+                new_page.insert_textbox(rect, change["amendment"], fontsize=9, fontname="helv")
+                
+                y_offset += 140
+                if y_offset > page_height - 100:
+                    new_page = doc.new_page(width=page_width, height=page_height)
+                    y_offset = 50
+
+            # --- Footer ---
+            new_page.draw_line(fitz.Point(40, page_height - 50), fitz.Point(page_width - 40, page_height - 50), color=(0.8, 0.8, 0.8))
+            new_page.insert_text((40, page_height - 35), f"Digitally Verified by Compliance AI Orchestrator | {report['timestamp']}", 
+                                fontsize=7, fontname="helv-italic", color=(0.6, 0.6, 0.6))
+
+            tmp_path = None
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False, dir=COMPANY_DOCS_PATH) as tmp:
                 tmp_path = tmp.name
-
-            doc.save(tmp_path)   # Full save — avoids incremental/encryption crash
+            
+            doc.save(tmp_path)
             doc.close()
             os.replace(tmp_path, policy_path)
-            print("   → internal_policy.pdf updated (amendment page added)")
+            print("   → Professional amendment page added to policy")
 
         except Exception as e:
             print(f"   ⚠ PDF edit failed: {e}")
-            if tmp_path and os.path.exists(tmp_path):
-                try:
-                    os.remove(tmp_path)
-                except Exception:
-                    pass
 
         # Re-index ChromaDB with updated PDF
         try:

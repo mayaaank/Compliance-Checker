@@ -1,6 +1,14 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_URL = "http://localhost:8000";
 
-// ── Types matching backend schema (crew.py / main.py) ──────────────────────
+export interface TraceReference {
+  trace_id: string;
+  circular_reference: string;
+  circular_section: string;
+  affected_document: string;
+  affected_section: string;
+  timestamp: string;
+  status: string;
+}
 
 export interface Change {
   change_id: string;
@@ -12,18 +20,17 @@ export interface Change {
   affected_document: string;
   affected_section: string;
   amendment: string;
-}
-
-export interface ReferenceCase {
-  bank: string;
-  amount_lakh: number;
+  trace_reference?: TraceReference;
 }
 
 export interface FineRisk {
   probability_percent: number;
   estimated_amount_lakh: number;
   window_days: number;
-  reference_cases: ReferenceCase[];
+  reference_cases: Array<{
+    bank: string;
+    amount_lakh: number;
+  }>;
 }
 
 export interface Report {
@@ -35,64 +42,60 @@ export interface Report {
   changes: Change[];
   fine_risk: FineRisk;
   evolution_score: number;
-  // backend may return empty: true when no report exists yet
-  empty?: boolean;
-  message?: string;
 }
 
-export interface EvolutionRun {
-  run_id: string;
-  score: number;
-  timestamp: string;
-  risk_level?: string;
-  changes_count?: number;
-}
-
-export interface Evolution {
-  runs: EvolutionRun[];
-}
-
-export interface SimulationStatus {
-  status: "not_started" | "running" | "complete" | "failed";
-  steps_completed?: string[];
+export interface RunStatus {
+  status: "not_started" | "starting" | "running" | "complete" | "error";
   run_id?: string;
-  duration_seconds?: number;
+  steps_completed?: string[];
+  timestamp: string;
   error?: string;
 }
 
-// ── API calls ───────────────────────────────────────────────────────────────
-
-export async function runComplianceCheck(): Promise<{ status: string; run_id: string }> {
-  const res = await fetch(`${API_BASE_URL}/run_compliance_crew`, { method: "POST" });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: "Unknown error" }));
-    throw new Error(err.detail || "Failed to start compliance check");
+export async function runComplianceCheck() {
+  const response = await fetch(`${API_URL}/run_compliance_crew`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to run compliance check");
   }
-  return res.json();
+  return response.json();
 }
 
-export async function getStatus(): Promise<SimulationStatus> {
-  const res = await fetch(`${API_BASE_URL}/status`);
-  if (!res.ok) throw new Error("Failed to fetch status");
-  return res.json();
+export async function getStatus(): Promise<RunStatus> {
+  const response = await fetch(`${API_URL}/status`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch status");
+  }
+  return response.json();
 }
 
-export async function getLatestReport(): Promise<Report | null> {
-  const res = await fetch(`${API_BASE_URL}/report`);
-  if (!res.ok) throw new Error("Failed to fetch report");
-  const data = await res.json();
-  if (data.empty) return null;
+export async function getLatestReport(): Promise<Report> {
+  const response = await fetch(`${API_URL}/report`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch report");
+  }
+  const data = await response.json();
+  if (data.empty) {
+    throw new Error(data.message);
+  }
   return data;
 }
 
-export async function getEvolution(): Promise<Evolution> {
-  const res = await fetch(`${API_BASE_URL}/evolution`);
-  if (!res.ok) throw new Error("Failed to fetch evolution history");
-  return res.json();
+export async function getEvolution() {
+  const response = await fetch(`${API_URL}/evolution`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch evolution history");
+  }
+  return response.json();
 }
 
-export async function resetDemo(): Promise<{ status: string; message: string }> {
-  const res = await fetch(`${API_BASE_URL}/reset`, { method: "POST" });
-  if (!res.ok) throw new Error("Failed to reset demo");
-  return res.json();
+export async function resetDemo() {
+  const response = await fetch(`${API_URL}/reset`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to reset demo");
+  }
+  return response.json();
 }
