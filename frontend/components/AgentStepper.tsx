@@ -27,31 +27,31 @@ export default function AgentStepper({ activeAgent, agents }: AgentStepperProps)
           <div 
             key={agent.id}
             className={cn(
-              "flex items-start gap-6 p-6 rounded-2xl border transition-all duration-500",
-              isActive ? "bg-white/[0.04] border-white/20 shadow-[0_0_40px_rgba(255,255,255,0.03)] scale-[1.02]" : "border-transparent opacity-40"
+              "linear-card flex items-start gap-6 p-6 transition-all duration-300 border-white/[0.05]",
+              isActive ? "border-white/40 bg-white/[0.05] shadow-premium scale-[1.01]" : "opacity-60"
             )}
           >
             <div className={cn(
-              "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-500",
-              isCompleted ? "bg-emerald-500/10 text-emerald-400" :
-              isActive ? "bg-primary-500/20 text-primary-400" : "bg-white/5 text-text-muted"
+              "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border transition-all duration-500",
+              isCompleted ? "bg-white/10 text-white border-white/20" :
+              isActive ? "bg-white text-black border-white" : "bg-white/5 text-white/20 border-white/5"
             )}>
-              <Icon className={cn("w-6 h-6", isActive && "animate-pulse")} />
+              <Icon className={cn("w-5 h-5", isActive && "animate-pulse")} />
             </div>
 
             <div className="space-y-1">
               <div className="flex items-center gap-3">
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">Step 0{agent.id}</span>
-                {isCompleted && <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">Complete</span>}
+                <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Step 0{agent.id}</span>
+                {isCompleted && <span className="text-[9px] font-bold text-white uppercase tracking-widest opacity-60">Verified</span>}
               </div>
               <h3 className={cn(
-                "text-base font-bold transition-colors duration-500",
-                isActive || isCompleted ? "text-white" : "text-text-muted"
+                "text-[15px] font-bold transition-colors duration-500",
+                isActive || isCompleted ? "text-white" : "text-white/40"
               )}>
                 {agent.name}
               </h3>
               {isActive && (
-                <p className="text-sm font-medium text-text-secondary leading-relaxed animate-fade-in">
+                <p className="text-[14px] font-medium text-white/80 leading-relaxed animate-fade-in">
                   {agent.task}
                 </p>
               )}

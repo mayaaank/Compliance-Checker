@@ -11,6 +11,7 @@ import {
   ArrowUpRight
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { getEvolution } from "@/lib/api";
 import EmptyState from "@/components/EmptyState";
 
@@ -23,6 +24,8 @@ interface EvolutionRun {
 }
 
 export default function EvolutionHistoryPage() {
+  const searchParams = useSearchParams();
+  const isSuccess = searchParams.get("success") === "true";
   const [runs, setRuns] = useState<EvolutionRun[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +76,30 @@ export default function EvolutionHistoryPage() {
 
   return (
     <div className="pt-24 pb-20 px-8 min-h-screen animate-fade-in">
-      <div className="max-w-[1000px] mx-auto space-y-16">
+      <div className="max-w-[1000px] mx-auto space-y-12">
+        
+        {isSuccess && (
+          <div className="linear-card p-12 bg-white flex flex-col items-center text-center space-y-6 animate-in zoom-in-95 duration-700">
+             <div className="w-20 h-20 rounded-full bg-black flex items-center justify-center border border-white/20">
+                <ShieldCheck className="w-10 h-10 text-white" />
+             </div>
+             <div className="space-y-2">
+                <h2 className="text-4xl font-black text-black tracking-tightest uppercase">Remediation Success</h2>
+                <p className="text-black/40 font-black text-[13px] uppercase tracking-[0.4em]">Autonomous Evolution Cycle Complete</p>
+             </div>
+             <div className="flex items-center gap-12 pt-4">
+                <div className="text-center">
+                   <p className="text-[10px] font-bold text-black/20 uppercase tracking-widest leading-none">Score Delta</p>
+                   <p className="text-5xl font-black text-gray-900">+12%</p>
+                </div>
+                <div className="w-px h-12 bg-black/10" />
+                <div className="text-center">
+                   <p className="text-[10px] font-bold text-black/20 uppercase tracking-widest leading-none">Net Stability</p>
+                   <p className="text-5xl font-black text-black">{latestScore}%</p>
+                </div>
+             </div>
+          </div>
+        )}
         
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/[0.08] pb-12">

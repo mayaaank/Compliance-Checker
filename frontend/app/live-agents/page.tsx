@@ -31,86 +31,93 @@ const STAGE_LOGS: Record<number, string[]> = {
 export default function LiveAgentsPage() {
   const [currentAgent, setCurrentAgent] = useState(1);
   const [logs, setLogs] = useState<{ time: string; text: string; type: string }[]>([
-    { time: now(), text: "[SYSTEM] Compliance pipeline starting...", type: "system" },
+    { time: now(), text: "[SYSTEM] Multi-agent swarm initializing...", type: "system" },
   ]);
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const router = useRouter();
   const logEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
-  const animDone = useRef(false);
+  const backendStepsRef = useRef<number>(0);
+  const isCompleteRef = useRef<boolean>(false);
 
-  // Auto-scroll logs
-  useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [logs]);
+  // Auto-scroll logs disabled as requested
 
+  // Backend Polling
   useEffect(() => {
     pollingRef.current = setInterval(async () => {
       try {
         const status = await getStatus();
-        
-        // Map backend steps to current agent
-        const stepsCount = status.steps_completed?.length || 0;
-        
-        if (status.status === "failed") {
+        if (status.status === "error") {
+          setPipelineError(status.error || "Node failure");
           clearInterval(pollingRef.current!);
-          setPipelineError(status.error || "Pipeline failed — check backend logs");
           return;
         }
-
-        // Keep currentAgent bounded between 1 and 6 based on steps
-        const currentStep = Math.min(6, stepsCount + 1);
-        setCurrentAgent(currentStep);
-
-        // Manage logs smoothly based on the step transition
-        if (currentStep > 1 && currentStep <= 6) {
-           const prevAgent = AGENTS[currentStep - 2].name;
-           const currAgent = AGENTS[currentStep - 1].name;
-           const currTask = AGENTS[currentStep - 1].task;
-           
-           setLogs(prev => {
-             // Only insert new logs if the step actually moved forward
-             if (!prev.some(log => log.text.includes(currTask))) {
-                return [
-                  ...prev,
-                  { time: now(), text: `✓ ${prevAgent} — complete`, type: "success" },
-                  { time: now(), text: `[SYSTEM] Handoff to ${currAgent}...`, type: "system" },
-                  { time: now(), text: currTask, type: "info" }
-                ];
-             }
-             return prev;
-           });
-        }
-
-        if (status.status === "complete") {
-          clearInterval(pollingRef.current!);
-          setLogs(prev => [...prev, { time: now(), text: `✓ ${AGENTS[5].name} — complete`, type: "success" }]);
-          setTimeout(() => router.push("/dashboard"), 1500);
-        }
-
+        backendStepsRef.current = status.steps_completed?.length || 0;
+        if (status.status === "complete") isCompleteRef.current = true;
       } catch (err) {
-        console.warn("Backend unreachable during poll.");
+        console.warn("Poll failed");
       }
-    }, 1500);
+    }, 800);
+    return () => clearInterval(pollingRef.current!);
+  }, []);
 
-    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+  // Smooth UI Progression (Ensures each step is seen)
+  useEffect(() => {
+    const sequence = setInterval(() => {
+      setCurrentAgent(prev => {
+        // If we are showing a step and backend hasn't reached it yet, wait
+        if (prev > backendStepsRef.current && !isCompleteRef.current) return prev;
+        
+        // Progress to next step if there is one
+        if (prev < 6) {
+           const nextAgent = AGENTS[prev].name;
+           const nextTask = AGENTS[prev].task;
+           setLogs(l => [
+             ...l,
+             { time: now(), text: `✓ Cycle phase ${prev} verified`, type: "success" },
+             { time: now(), text: `[NODE] Handover to ${nextAgent}...`, type: "system" },
+             { time: now(), text: `>> ${nextTask}`, type: "info" }
+           ]);
+           return prev + 1;
+        }
+
+        // Finalize if all steps done and backend is complete
+        if (prev === 6 && isCompleteRef.current) {
+          clearInterval(sequence);
+          setLogs(l => [...l, { time: now(), text: "✓ FULL COMPLIANCE RADIUS ESTABLISHED", type: "success" }]);
+          setTimeout(() => {
+            router.push("/evolution-history?success=true");
+          }, 2000); 
+        }
+        
+        return prev;
+      });
+    }, 800); // 800ms per agent step for rapid visibility
+
+    return () => clearInterval(sequence);
   }, [router]);
 
+  // Force scroll unlock
+  useEffect(() => {
+    document.body.style.overflow = "auto";
+    document.documentElement.style.overflow = "auto";
+  }, []);
+
   return (
-    <div className="pt-24 pb-20 px-8 min-h-screen flex flex-col items-center animate-fade-in relative">
+    <div className="pt-24 pb-32 px-8 min-h-screen flex flex-col items-center animate-fade-in relative scroll-smooth">
       <div className="absolute inset-0 linear-grid mask-fade-top opacity-5 pointer-events-none" />
 
-      <div className="max-w-[1200px] w-full space-y-20 relative z-10">
-        <div className="text-center space-y-6">
-          <div className="flex items-center justify-center space-x-3 text-[10px] font-bold text-text-muted uppercase tracking-[0.4em]">
-            <div className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.6)]" />
-            <span>Compliance Pipeline Running</span>
+      <div className="max-w-[1200px] w-full space-y-12 relative z-10">
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center space-x-3 text-[10px] font-bold text-white/40 uppercase tracking-[0.4em]">
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
+            <span>Compliance Pipeline Active</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tightest text-white">
-            Processing Circular Delta
+          <h1 className="text-5xl md:text-6xl font-black tracking-tightest text-white leading-tight">
+            Compliance Evolution Cycle
           </h1>
-          <p className="text-text-secondary text-base md:text-lg font-medium max-w-xl mx-auto leading-relaxed">
-            Scraping, diffing, mapping, and drafting amendments against RBI/2026/41.
+          <p className="text-white/60 text-lg font-medium max-w-xl mx-auto leading-relaxed">
+            Running autonomous multi-agent swarm against RBI/2026/41.
           </p>
         </div>
 
@@ -121,33 +128,33 @@ export default function LiveAgentsPage() {
 
           <div className="lg:col-span-3 space-y-8">
             {pipelineError ? (
-              <div className="linear-card p-8 border border-risk-high/30 bg-risk-high/5 space-y-3">
-                <p className="text-sm font-bold text-risk-high uppercase tracking-widest">Pipeline Error</p>
-                <p className="text-text-secondary text-sm font-mono">{pipelineError}</p>
+              <div className="linear-card p-8 border border-white/20 bg-white/5 space-y-3">
+                <p className="text-sm font-bold text-white uppercase tracking-widest">Pipeline Error</p>
+                <p className="text-white/60 text-sm font-mono">{pipelineError}</p>
                 <button onClick={() => router.push("/simulate")} className="linear-button-secondary h-10 mt-2">
                   Try Again
                 </button>
               </div>
             ) : (
-              <div className="linear-card bg-black/40 p-12 min-h-[550px] flex flex-col font-mono relative overflow-hidden shadow-2xl">
+              <div className="linear-card bg-black/40 p-12 min-h-[600px] flex flex-col font-mono relative overflow-hidden shadow-2xl border-white/10">
                 <div className="flex items-center justify-between border-b border-white/[0.08] pb-8 mb-8">
                   <div className="flex items-center space-x-4">
-                    <TerminalIcon className="w-4 h-4 text-text-muted" />
-                    <span className="text-xs font-bold text-white tracking-[0.2em] uppercase">Pipeline Log</span>
+                    <TerminalIcon className="w-5 h-5 text-white/40" />
+                    <span className="text-[11px] font-bold text-white uppercase tracking-[0.3em]">Execution Logs</span>
                   </div>
-                  <span className="text-[10px] font-bold text-primary-500 uppercase tracking-widest animate-pulse">
-                    Running...
+                  <span className="text-[10px] font-bold text-white uppercase tracking-widest animate-pulse">
+                    Live Stream
                   </span>
                 </div>
 
-                <div className="flex-1 space-y-3 text-[13px] overflow-y-auto pr-2">
+                <div className="flex-1 space-y-4 text-[13px] overflow-y-auto pr-2 custom-scrollbar">
                   {logs.map((log, i) => (
-                    <div key={i} className={`flex items-start space-x-4 ${i === logs.length - 1 ? "opacity-100" : "opacity-40"}`}>
-                      <span className="text-[11px] font-bold text-text-muted shrink-0 pt-0.5">{log.time}</span>
+                    <div key={i} className={`flex items-start space-x-4 ${i === logs.length - 1 ? "opacity-100" : "opacity-50"}`}>
+                      <span className="text-[11px] font-bold text-white/30 shrink-0 pt-0.5">{log.time}</span>
                       <span className={
-                        log.type === "success" ? "text-emerald-400 font-medium" :
-                        log.type === "system"  ? "text-primary-500 font-medium" :
-                        "text-white/80"
+                        log.type === "success" ? "text-white font-bold" :
+                        log.type === "system"  ? "text-white/70 font-medium italic" :
+                        "text-white/90"
                       }>
                         {log.text}
                       </span>

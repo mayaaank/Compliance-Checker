@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, FileText, ArrowRight, Cpu, Layout, ShieldCheck } from "lucide-react";
 import FileUploadZone from "@/components/FileUploadZone";
-import { runComplianceCheck } from "@/lib/api";
+import { runComplianceCheck, resetDemo } from "@/lib/api";
 import { useToast } from "@/components/ToastProvider";
 
 export default function SimulatePage() {
@@ -17,7 +17,8 @@ export default function SimulatePage() {
     setIsUploading(true);
     try {
       showToast("Initializing Compliance Swarm...", "info");
-      await runComplianceCheck();
+      await resetDemo();
+      await runComplianceCheck(file);
       router.push("/live-agents");
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Handshake failed", "error");
@@ -32,7 +33,7 @@ export default function SimulatePage() {
       <div className="max-w-4xl w-full space-y-16 animate-fade-in text-center relative z-10">
         
         <div className="space-y-8">
-          <div className="inline-flex items-center space-x-3 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-[11px] font-bold text-primary-500 uppercase tracking-[0.3em] animate-fade-in mx-auto">
+          <div className="inline-flex items-center space-x-3 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-[11px] font-bold text-white uppercase tracking-[0.3em] animate-fade-in mx-auto">
              <ShieldCheck className="w-3.5 h-3.5" />
              <span>Document Intelligence Layer</span>
           </div>

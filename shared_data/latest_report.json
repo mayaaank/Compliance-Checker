@@ -1,6 +1,6 @@
 {
-  "run_id": "run_3",
-  "timestamp": "2026-04-10T19:36:13.276812",
+  "run_id": "run_1",
+  "timestamp": "2026-04-11T04:43:12.434350",
   "circular_source": "RBI/2026/41",
   "summary": "1 clause change(s) detected affecting internal policy and product catalog.",
   "risk_level": "high",
@@ -8,20 +8,20 @@
     {
       "change_id": "c1",
       "change_type": "modified",
-      "old_text": "\u036a \u036a, \u0223 , \u0223 , \u0223 \u0367 , , -400 001, Foreign Exchange Department, Central Office ,Central Office Building., Shahid Bhagat Singh Road, Fort, Mumbai-400 001, India \u0223/Tel. No.022-22601000 /Fax No. 022- 22665330 022-22603000 22694935, : helpfed@rbi.org.in \u01d1\u0223 , RBI/2026-27/05 A.P. (DIR Series) Circular No. 04 April 2, 2026 To All Authorised Persons Madam/Sir, Memorandum of Instructions governing money changing activities \u2013 Location of Forex Counters in International Airports in India Please refer to Paragraph 3 of A.P. (DIR Series) Circular No. 45 dated September 16, 2013, on the above subject. 2. On a r",
-      "new_text": "\u012f ______________________ RESERVE BANK OF INDIA________________________ www.rbi.org.in \u036a \u036a \u036a, \u0223 ,10 , \u0223 , \u0223 \u0367 , . 10014, -400001 Financial Inclusion & Development Dept, Central Office,10th Floor, Central Office Building, Shahid Bhagat Singh Marg, P.B.No.10014, Mumbai-1 \u0223 Tel:022-22601000 91-22-22621011/22610943/22610948 -: cgmincfidd@rbi.org.in \u01d1\u0223 , \u201c: \u01d0 - , \u01d0 \u0369 \u0227 \u0223 , \u01d1 \u0223 \u0223 \u0369 \u0223 \u0223\" Caution: RBI never sends mails, SMSs or makes calls asking for personal information like bank account details, passwords, etc. It never keeps or offers funds to anyone. Please do not respond in any manner to such offe",
-      "section_hint": "Section 1",
+      "old_text": "The testing will be conducted in a staging environment that mirrors production, using the latest stable build.",
+      "new_text": "The testing must be conducted in a staging environment that mirrors production, using the latest stable build and is subject to regular security audits.",
+      "section_hint": "2. Environment",
       "risk": "high",
       "affected_document": "internal_policy.pdf",
-      "affected_section": "Section 1",
-      "amendment": "Update Section 1 to comply with RBI circular 2026/41. Specifically: \u012f ______________________ RESERVE BANK OF INDIA________________________ www.rbi.org.in \u036a \u036a \u036a, \u0223 ,10 , \u0223 , \u0223 \u0367 , . 10014, -400001 Financial Inclusion & Development Dept, Central Office,10th Floor, Centr",
+      "affected_section": "2. Environment",
+      "amendment": "2.1. Testing shall be conducted in a staging environment that mirrors production, utilizing the latest stable build, and subject to regular security audits.",
       "trace_reference": {
-        "trace_id": "TRC-RBI-26-41-RUN_3-C5A9",
+        "trace_id": "TRC-RBI-26-41-RUN_1-65FA",
         "circular_reference": "RBI/2026/41",
-        "circular_section": "Section 1",
+        "circular_section": "2. Environment",
         "affected_document": "internal_policy.pdf",
-        "affected_section": "Section 1",
-        "timestamp": "2026-04-10T19:36:13.276804",
+        "affected_section": "2. Environment",
+        "timestamp": "2026-04-11T04:43:12.433716",
         "status": "pending_review"
       }
     }

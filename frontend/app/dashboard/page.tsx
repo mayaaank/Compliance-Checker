@@ -13,13 +13,23 @@ import DiffViewer from "@/components/DiffViewer";
 import CEOModal from "@/components/CEOModal";
 import { getLatestReport, Report } from "@/lib/api";
 
+import PriorityScoring from "@/components/PriorityScoring";
+import AIInsights from "@/components/AIInsights";
+import TaskBreakdown from "@/components/TaskBreakdown";
+
 export default function DashboardPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCEOModalOpen, setIsCEOModalOpen] = useState(false);
+  const [userName, setUserName] = useState("Compliance Officer");
 
   useEffect(() => {
+    const profile = localStorage.getItem("userProfile");
+    if (profile) {
+      setUserName(JSON.parse(profile).fullName);
+    }
+
     async function fetchReport() {
       try {
         const data = await getLatestReport();
@@ -103,32 +113,38 @@ export default function DashboardPage() {
       <div className="max-w-[1400px] mx-auto space-y-12">
 
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 border-b border-white/[0.08] pb-12">
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3 text-[10px] font-bold text-text-muted uppercase tracking-[0.4em]">
-              <Activity className="w-3.5 h-3.5" />
-              <span>Source: {report.circular_source} · Run {report.run_id}</span>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 border-b border-white/[0.1] pb-12">
+          <div className="space-y-6">
+            <div className="flex items-center space-x-4 text-[13px] font-bold text-white uppercase tracking-[0.5em]">
+              <Activity className="w-4 h-4" />
+              <span>Identity: {userName} · Source: {report.circular_source}</span>
             </div>
-            <h1 className="text-4xl font-bold tracking-tightest text-white">Compliance Overview</h1>
-            <p className="text-text-secondary text-base font-medium max-w-xl">
+            <h1 className="text-5xl font-bold tracking-tightest text-white">Compliance Overview</h1>
+            <p className="text-white text-lg font-medium max-w-2xl leading-relaxed">
               {report.summary}
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/simulate" className="linear-button-secondary h-11">
-              <Plus className="w-4 h-4 mr-2" /> New Simulation
+            <Link href="/simulate" className="linear-button-secondary h-12 px-8">
+              <Plus className="w-5 h-5 mr-2" /> New Simulation
             </Link>
             <button
               onClick={() => setIsCEOModalOpen(true)}
-              className="h-11 px-6 bg-risk-high/10 text-risk-high border border-risk-high/20 rounded-xl text-sm font-bold hover:bg-risk-high hover:text-white transition-all"
+              className="h-12 px-8 bg-risk-high/10 text-risk-high border border-risk-high/20 rounded-xl text-[14px] font-bold hover:bg-risk-high hover:text-white transition-all uppercase tracking-widest"
             >
               Raise CEO Alert
             </button>
-            <Link href="/impact-report" className="linear-button-primary h-11">
-              <Download className="w-4 h-4 mr-2" /> Export Report
+            <Link href="/impact-report" className="linear-button-primary h-12 px-8">
+              <Download className="w-5 h-5 mr-2" /> Export Report
             </Link>
           </div>
         </div>
+
+        {/* Priority & Penalty Section */}
+        <PriorityScoring 
+           changes={changes} 
+           totalExpectedFine={report.fine_risk?.estimated_amount_lakh || 0} 
+        />
 
         {/* Metrics — derived from real data */}
         <div className="grid md:grid-cols-4 gap-6">
@@ -139,31 +155,34 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-10">
-          <div className="lg:col-span-2 space-y-10">
+          <div className="lg:col-span-2 space-y-12">
+
+            {/* AI Insights - Full Width for this column */}
+            <AIInsights summary={report.summary} />
 
             {/* Semantic Delta — first change comparison */}
             {primaryChange && (
-              <div className="linear-card p-10 space-y-8 overflow-hidden relative">
-                <div className="flex items-center justify-between border-b border-white/[0.08] pb-6">
+              <div className="linear-card p-12 space-y-10 overflow-hidden relative border-neutral-800">
+                <div className="flex items-center justify-between border-b border-white/[0.1] pb-8">
                   <div className="flex items-center space-x-4">
-                    <Terminal className="w-4 h-4 text-text-muted" />
-                    <h3 className="text-xs font-bold text-white uppercase tracking-[0.3em]">Semantic Delta Analyzer</h3>
+                    <Terminal className="w-5 h-5 text-white" />
+                    <h3 className="text-[13px] font-bold text-white uppercase tracking-[0.4em]">Semantic Delta Analyzer</h3>
                   </div>
-                  <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+                  <span className="text-[12px] font-bold text-white uppercase tracking-widest">
                     {primaryChange.affected_section}
                   </span>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-10">
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-[0.3em]">Previous Circular</label>
-                    <div className="p-6 bg-black/40 rounded-2xl border border-white/[0.05] text-[14px] text-text-secondary leading-relaxed font-medium">
+                <div className="grid md:grid-cols-2 gap-12">
+                  <div className="space-y-6">
+                    <label className="text-[13px] font-bold text-white uppercase tracking-[0.4em]">Previous Circular</label>
+                    <div className="p-8 bg-black/40 rounded-2xl border border-white/[0.1] text-[15px] text-white leading-relaxed font-medium">
                       {primaryChange.old_text || "—"}
                     </div>
                   </div>
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-[0.3em]">New Regulation</label>
-                    <div className="p-6 bg-white/[0.03] rounded-2xl border border-white/[0.1] text-[14px] text-white font-medium leading-relaxed">
+                  <div className="space-y-6">
+                    <label className="text-[13px] font-bold text-white uppercase tracking-[0.4em]">New Regulation</label>
+                    <div className="p-8 bg-white/[0.04] rounded-2xl border border-white/[0.2] text-[15px] text-white font-medium leading-relaxed">
                       {primaryChange.new_text}
                     </div>
                   </div>
@@ -172,19 +191,22 @@ export default function DashboardPage() {
             )}
 
             {/* Amendments */}
-            <div className="space-y-6">
+            <div className="space-y-8">
               <div className="flex items-center space-x-4 px-2">
-                <Search className="w-4 h-4 text-text-muted" />
-                <span className="text-[11px] font-bold text-text-muted uppercase tracking-[0.3em]">Automated Corrective Logic</span>
+                <Search className="w-5 h-5 text-white" />
+                <span className="text-[13px] font-bold text-white uppercase tracking-[0.4em]">Automated Corrective Logic</span>
               </div>
               <DiffViewer amendments={amendments} />
             </div>
+
+            {/* Task Breakdown */}
+            <TaskBreakdown />
           </div>
 
-          <div className="space-y-10">
+          <div className="space-y-12">
             {/* Fine Risk */}
-            <div className="space-y-6">
-              <span className="text-[11px] font-bold text-text-muted uppercase tracking-[0.3em] px-2">Predictive Enforcement</span>
+            <div className="space-y-8">
+              <span className="text-[13px] font-bold text-white uppercase tracking-[0.4em] px-2">Predictive Enforcement</span>
               <FineSimulator
                 probability={report.fine_risk?.probability_percent || 0}
                 referenceCases={referenceCases}
@@ -192,16 +214,16 @@ export default function DashboardPage() {
             </div>
 
             {/* Risk Cards */}
-            <div className="space-y-6">
-              <span className="text-[11px] font-bold text-text-muted uppercase tracking-[0.3em] px-2">Compliance Hotspots</span>
+            <div className="space-y-8">
+              <span className="text-[13px] font-bold text-white uppercase tracking-[0.4em] px-2">Compliance Hotspots</span>
               <div className="grid gap-4">
                 {riskCards.map(risk => (
                   <RiskCard key={risk.id} {...risk} />
                 ))}
               </div>
-              <Link href="/simulate" className="w-full linear-button-secondary h-11 flex items-center justify-between group">
-                <span>Initiate Remediation Cycle</span>
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              <Link href="/simulate" className="w-full linear-button-secondary h-12 flex items-center justify-between group px-8">
+                <span className="uppercase tracking-widest font-bold text-[12px]">Initiate Remediation Cycle</span>
+                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </Link>
             </div>
           </div>

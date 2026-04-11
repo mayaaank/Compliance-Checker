@@ -32,16 +32,16 @@ export default function RiskCard({ title, description, level }: RiskCardProps) {
   const { icon: Icon, color, label } = config[level];
 
   return (
-    <div className="linear-card p-5 space-y-4 group hover:bg-white/[0.04] transition-all">
+    <div className="linear-card p-6 space-y-4 hover:border-white/20 transition-all cursor-default border-neutral-800">
       <div className="flex items-center justify-between">
-         <div className={cn("px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-widest", color)}>
+         <div className={cn("px-2.5 py-1 rounded border text-[11px] font-bold uppercase tracking-widest whitespace-nowrap", color)}>
            {label}
          </div>
-         <Icon className={cn("w-4 h-4", level === 'high' ? 'text-risk-high' : 'text-text-muted')} />
+         <Icon className={cn("w-4 h-4 opacity-50")} />
       </div>
       <div className="space-y-2">
-         <h4 className="text-sm font-bold text-white uppercase tracking-tight line-clamp-1">{title}</h4>
-         <p className="text-[12px] font-medium text-text-secondary leading-relaxed line-clamp-2">
+         <h4 className="text-[14px] font-bold text-white uppercase tracking-tight line-clamp-1">{title}</h4>
+         <p className="text-[13px] font-medium text-white/70 leading-relaxed line-clamp-2">
            {description}
          </p>
       </div>

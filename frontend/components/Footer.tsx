@@ -10,7 +10,7 @@ export default function Footer() {
             <Link href="/" className="flex items-center space-x-2 group">
               <Shield className="w-5 h-5 text-white fill-white/10 group-hover:fill-white/30 transition-all" />
               <span className="text-[14px] font-bold tracking-tight text-white uppercase">
-                Compliance Checker
+                Compliance OS
               </span>
             </Link>
             <p className="text-sm font-medium text-text-secondary max-w-sm leading-relaxed">

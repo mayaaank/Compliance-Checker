@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { ToastProvider } from "@/components/ToastProvider";
 import { PageTransition } from "@/components/PageTransition";
+import ProfileManager from "@/components/ProfileManager";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Compliance Checker | Know what changed. Fix it before you're fined.",
+  title: "Compliance OS | Know what changed. Fix it before you're fined.",
   description: "Automated regulatory compliance tool for RBI/SEBI/MCA circulars.",
 };
 
@@ -30,6 +31,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans`}>
         <ToastProvider>
+          <ProfileManager />
           <Navbar />
           <main className="min-h-screen">
             <PageTransition>

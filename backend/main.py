@@ -8,7 +8,7 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 from contextlib import contextmanager
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from backend.utils.config import SHARED_DATA_PATH
 
@@ -21,14 +21,14 @@ logging.basicConfig(
 logger = logging.getLogger("compliance-api")
 
 app = FastAPI(
-    title="Compliance Checker API",
+    title="Compliance OS API",
     description="Single-agent compliance pipeline for RBI/SEBI/MCA circulars",
     version="2.0.0",
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origin_regex="https?://localhost:.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -122,7 +122,7 @@ def run_agent_sync():
 # ── Endpoints ──────────────────────────────────────────────────────────────
 
 @app.post("/run_compliance_crew")
-async def run_compliance_crew(background_tasks: BackgroundTasks):
+async def run_compliance_crew(background_tasks: BackgroundTasks, file: UploadFile = File(None)):
     """
     Triggers the ComplianceOrchestratorAgent pipeline.
     Uses BackgroundTasks to prevent freezing and file locking to prevent duplicate runs.
@@ -146,6 +146,21 @@ async def run_compliance_crew(background_tasks: BackgroundTasks):
                 "status": "starting",
                 "timestamp": ""
             })
+
+            if file and file.filename:
+                docs_dir = Path("backend/data/company_docs")
+                docs_dir.mkdir(parents=True, exist_ok=True)
+                dest_path = docs_dir / "internal_policy.pdf"
+                try:
+                    with open(dest_path, "wb") as buffer:
+                        shutil.copyfileobj(file.file, buffer)
+                    backup_path = docs_dir / "internal_policy_backup.pdf"
+                    shutil.copy2(dest_path, backup_path)
+                    logger.info(f"User uploaded policy document saved to {dest_path}")
+                except Exception as file_err:
+                    logger.error(f"Failed to process or save the uploaded file: {file_err}", exc_info=True)
+                    raise HTTPException(status_code=500, detail=f"File transmission or IO error: {file_err}")
+
 
     except TimeoutError:
         logger.warning("Could not acquire lock - pipeline may be starting")
